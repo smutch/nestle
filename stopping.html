@@ -1,0 +1,279 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Stopping Criterion &mdash; nestle 0.2.0 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  
+
+  
+    <link rel="stylesheet" href="_static/gallery.css" type="text/css" />
+  
+
+  
+    <link rel="top" title="nestle 0.2.0 documentation" href="index.html"/>
+        <link rel="next" title="API" href="api.html"/>
+        <link rel="prev" title="The Prior Transform" href="prior.html"/> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> nestle
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.2
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="examples/index.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="prior.html">The Prior Transform</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Stopping Criterion</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#estimated-remaining-evidence">Estimated remaining evidence</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#declining-weight-of-saved-samples">Declining weight of saved samples</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="devdocs.html">Developers&#8217; Docs</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="index.html">nestle</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+ 
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="index.html">Docs</a> &raquo;</li>
+      
+    <li>Stopping Criterion</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="_sources/stopping.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="stopping-criterion">
+<h1>Stopping Criterion<a class="headerlink" href="#stopping-criterion" title="Permalink to this headline">¶</a></h1>
+<p>Nested sampling has no well-defined stopping point. As iterations
+continue, the active points sample a smaller and smaller region of
+prior space. This can continue indefinitely (up to the limits of your
+machine). Unlike typical MCMC methods, we don&#8217;t gain any additional
+precision on the results by letting the algorithm run longer; the
+precision is determined at the outset by the number of active
+points. So, we want to stop iterations as soon as we think the active
+points are doing a &#8220;pretty good job&#8221; sampling the remaining prior
+volume &#8211; once we&#8217;ve converged to the highest-likelihood regions such
+that the likelihood is relatively flat within the remaining prior
+volume.</p>
+<p>For an arbitrary likelihood surface, there&#8217;s no way to ever guarantee
+that we&#8217;ve found the highest likelihood region. There could always be
+some vanishingly small volume with such high likelihood that it
+dominates the evidence integral (but this is a generic problem with
+sampling methods). In practice, there are a couple heuristic stopping
+criteria that work pretty well for determining when we&#8217;ve found the
+highest-likelihood regions.</p>
+<div class="section" id="estimated-remaining-evidence">
+<h2>Estimated remaining evidence<a class="headerlink" href="#estimated-remaining-evidence" title="Permalink to this headline">¶</a></h2>
+<p>In this criteria, we estimate the maximum remaining evidence and stop
+when the contribution of the remaining evidence to the total evidence
+falls below some threshold. The remaining evidence is difficult to
+estimate (this is what we are trying to calculate in the algorithm
+after all!), but the current active points give <em>some</em> idea of how
+much evidence could remain. More specifically, the current active
+point with the highest likelihood gives an estimate of the higest
+likelihood in the region. We estimate the remaining evidence at iteration i
+according to</p>
+<div class="math">
+\[\mathcal{Z}_\mathrm{est} = \mathcal{L}_\mathrm{max} X_i\]</div>
+<p>where <span class="math">\(X_i\)</span> is the remaining prior volume.
+The stopping criteria is then based on the ratio between the estimated
+total evidence and the current evidence:</p>
+<div class="math">
+\[\log (\mathcal{Z}_i + \mathcal{Z}_\mathrm{est}) - \log \mathcal{Z}_i &lt;
+\mathrm{thresh}\]</div>
+<p>where thresh is a user-defined parameter that defaults to 0.5. This is the
+<code class="docutils literal"><span class="pre">dlogz</span></code> option in <a class="reference internal" href="api.html#nestle.sample" title="nestle.sample"><code class="xref py py-obj docutils literal"><span class="pre">nestle.sample</span></code></a>.</p>
+<p>One can show that the expectation value of <span class="math">\(\mathcal{L}_\mathrm{max}\)</span> is
+<span class="math">\(\mathcal{L}_{i + N log N}\)</span>, where <em>N</em> is the number of active points.
+This means that the highest-likelihood active point will be equivalent to a
+point saved <span class="math">\(N log N\)</span> iterations later, after the remaining volume has
+shrunk by a factor of <em>N</em>.</p>
+</div>
+<div class="section" id="declining-weight-of-saved-samples">
+<h2>Declining weight of saved samples<a class="headerlink" href="#declining-weight-of-saved-samples" title="Permalink to this headline">¶</a></h2>
+<p>This method is based on looking for a flattening of the likelihood region
+being traversed. While the likelihood of saved samples will always increase,
+the increase will become smaller and smaller as the likelihood flattens.
+We look for a critical point where the likelihood increase becomes smaller than
+the decrease in the prior volume.</p>
+<div class="math">
+\[\begin{split}\mathcal{L}_{i+1} / \mathcal{L}_i &amp;&lt; X_i / X_{i+1}  \\
+                                  &amp;&lt; e^{1/N}        \\
+\log \mathcal{L}_{i+1} - \log \mathcal{L}_i &amp;&lt; 1/N\end{split}\]</div>
+<p>This is equivalent to a declining sample weight (likelihood times
+sample prior volume).  There is significant sampling noise in the
+likelihood values, so we cannot stop immediately once this condition
+is fulfilled. Instead, we look stop when this condition is fulfilled
+for a number of repeated samples. In <a class="reference internal" href="api.html#nestle.sample" title="nestle.sample"><code class="xref py py-obj docutils literal"><span class="pre">nestle.sample</span></code></a>, this is set by
+the <code class="docutils literal"><span class="pre">decline_factor</span></code> parameter, which instructs the algorithm to
+stop after <code class="docutils literal"><span class="pre">decline_factor</span> <span class="pre">*</span> <span class="pre">nsamples</span></code> consecutive samples
+fulfilling the condition. This stopping criteria is inactive by
+default.</p>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="api.html" class="btn btn-neutral float-right" title="API" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="prior.html" class="btn btn-neutral" title="The Prior Transform" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2014-2015, Kyle Barbary and contributors.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'0.2.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

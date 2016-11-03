@@ -1,0 +1,493 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>API &mdash; nestle 0.2.0 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  
+
+  
+    <link rel="stylesheet" href="_static/gallery.css" type="text/css" />
+  
+
+  
+    <link rel="top" title="nestle 0.2.0 documentation" href="index.html"/>
+        <link rel="next" title="Developers’ Docs" href="devdocs.html"/>
+        <link rel="prev" title="Stopping Criterion" href="stopping.html"/> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> nestle
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.2
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="examples/index.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="prior.html">The Prior Transform</a></li>
+<li class="toctree-l1"><a class="reference internal" href="stopping.html">Stopping Criterion</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="devdocs.html">Developers&#8217; Docs</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="index.html">nestle</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+ 
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="index.html">Docs</a> &raquo;</li>
+      
+    <li>API</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="_sources/api.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="module-nestle">
+<span id="api"></span><h1>API<a class="headerlink" href="#module-nestle" title="Permalink to this headline">¶</a></h1>
+<p>Nestle: nested sampling routines to evaluate Bayesian evidence.</p>
+<dl class="function">
+<dt id="nestle.sample">
+<code class="descclassname">nestle.</code><code class="descname">sample</code><span class="sig-paren">(</span><em>loglikelihood</em>, <em>prior_transform</em>, <em>ndim</em>, <em>npoints=100</em>, <em>method='single'</em>, <em>update_interval=None</em>, <em>npdim=None</em>, <em>maxiter=None</em>, <em>maxcall=None</em>, <em>dlogz=None</em>, <em>decline_factor=None</em>, <em>rstate=None</em>, <em>callback=None</em>, <em>**options</em><span class="sig-paren">)</span><a class="headerlink" href="#nestle.sample" title="Permalink to this definition">¶</a></dt>
+<dd><p>Perform nested sampling to evaluate Bayesian evidence.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>loglikelihood</strong> : function</p>
+<blockquote>
+<div><p>Function returning log(likelihood) given parameters as a 1-d numpy
+array of length <em>ndim</em>.</p>
+</div></blockquote>
+<p><strong>prior_transform</strong> : function</p>
+<blockquote>
+<div><p>Function translating a unit cube to the parameter space according to
+the prior. The input is a 1-d numpy array with length <em>ndim</em>, where
+each value is in the range [0, 1). The return value should also be a
+1-d numpy array with length <em>ndim</em>, where each value is a parameter.
+The return value is passed to the loglikelihood function. For example,
+for a 2 parameter model with flat priors in the range [0, 2), the
+function would be:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">prior_transform</span><span class="p">(</span><span class="n">u</span><span class="p">):</span>
+    <span class="k">return</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="n">u</span>
+</pre></div>
+</div>
+</div></blockquote>
+<p><strong>ndim</strong> : int</p>
+<blockquote>
+<div><p>Number of parameters returned by prior and accepted by loglikelihood.</p>
+</div></blockquote>
+<p><strong>npoints</strong> : int, optional</p>
+<blockquote>
+<div><p>Number of active points. Larger numbers result in a more finely
+sampled posterior (more accurate evidence), but also a larger
+number of iterations required to converge. Default is 100.</p>
+</div></blockquote>
+<p><strong>method</strong> : {&#8216;classic&#8217;, &#8216;single&#8217;, &#8216;multi&#8217;}, optional</p>
+<blockquote>
+<div><p>Method used to select new points. Choices are &#8216;classic&#8217;,
+single-ellipsoidal (&#8216;single&#8217;), multi-ellipsoidal (&#8216;multi&#8217;). Default
+is &#8216;single&#8217;.</p>
+</div></blockquote>
+<p><strong>update_interval</strong> : int, optional</p>
+<blockquote>
+<div><p>Only update the new point selector every <code class="docutils literal"><span class="pre">update_interval</span></code>-th
+likelihood call. Update intervals larger than 1 can be more efficient
+when the likelihood function is very fast, particularly when
+using the multi-ellipsoid method. Default is round(0.6 * npoints).</p>
+</div></blockquote>
+<p><strong>npdim</strong> : int, optional</p>
+<blockquote>
+<div><p>Number of parameters accepted by prior. This might differ from <em>ndim</em>
+in the case where a parameter of loglikelihood is dependent upon
+multiple independently distributed parameters, some of which may be
+nuisance parameters.</p>
+</div></blockquote>
+<p><strong>maxiter</strong> : int, optional</p>
+<blockquote>
+<div><p>Maximum number of iterations. Iteration may stop earlier if
+termination condition is reached. Default is no limit.</p>
+</div></blockquote>
+<p><strong>maxcall</strong> : int, optional</p>
+<blockquote>
+<div><p>Maximum number of likelihood evaluations. Iteration may stop earlier
+if termination condition is reached. Default is no limit.</p>
+</div></blockquote>
+<p><strong>dlogz</strong> : float, optional</p>
+<blockquote>
+<div><p>If supplied, iteration will stop when the estimated contribution
+of the remaining prior volume to the total evidence falls below
+this threshold. Explicitly, the stopping criterion is
+<code class="docutils literal"><span class="pre">log(z</span> <span class="pre">+</span> <span class="pre">z_est)</span> <span class="pre">-</span> <span class="pre">log(z)</span> <span class="pre">&lt;</span> <span class="pre">dlogz</span></code> where <em>z</em> is the current evidence
+from all saved samples, and <em>z_est</em> is the estimated contribution
+from the remaining volume. This option and decline_factor are
+mutually exclusive. If neither is specified, the default is
+<code class="docutils literal"><span class="pre">dlogz=0.5</span></code>.</p>
+</div></blockquote>
+<p><strong>decline_factor</strong> : float, optional</p>
+<blockquote>
+<div><p>If supplied, iteration will stop when the weight
+(likelihood times prior volume) of newly saved samples has been
+declining for <code class="docutils literal"><span class="pre">decline_factor</span> <span class="pre">*</span> <span class="pre">nsamples</span></code> consecutive samples.
+A value of 1.0 seems to work pretty well. This option and dlogz
+are mutually exclusive.</p>
+</div></blockquote>
+<p><strong>rstate</strong> : <a class="reference external" href="http://docs.scipy.org/doc/numpy/reference/generated/numpy.random.RandomState.html#numpy.random.RandomState" title="(in NumPy v1.11)"><code class="xref py py-obj docutils literal"><span class="pre">RandomState</span></code></a>, optional</p>
+<blockquote>
+<div><p>RandomState instance. If not given, the global random state of the
+<code class="docutils literal"><span class="pre">numpy.random</span></code> module will be used.</p>
+</div></blockquote>
+<p><strong>callback</strong> : function, optional</p>
+<blockquote>
+<div><p>Callback function to be called at each iteration. A single argument,
+a dictionary, is passed to the callback. The keys include <code class="docutils literal"><span class="pre">'it'</span></code>,
+the current iteration number, and <code class="docutils literal"><span class="pre">'logz'</span></code>, the current total
+log evidence of all saved points. To simply print these at each
+iteration, use the convience function
+<code class="docutils literal"><span class="pre">callback=nestle.print_progress</span></code>.</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>result</strong> : <a class="reference internal" href="#nestle.Result" title="nestle.Result"><code class="xref py py-obj docutils literal"><span class="pre">Result</span></code></a></p>
+<blockquote>
+<div><p>A dictionary-like object with attribute access: Attributes can be
+accessed with, for example, either <code class="docutils literal"><span class="pre">result['niter']</span></code> or
+<code class="docutils literal"><span class="pre">result.niter</span></code>. Attributes:</p>
+<dl class="docutils">
+<dt>niter <em>(int)</em></dt>
+<dd><p class="first last">Number of iterations.</p>
+</dd>
+<dt>ncall <em>(int)</em></dt>
+<dd><p class="first last">Number of likelihood calls.</p>
+</dd>
+<dt>logz <em>(float)</em></dt>
+<dd><p class="first last">Natural logarithm of evidence (integral of posterior).</p>
+</dd>
+<dt>logzerr <em>(float)</em></dt>
+<dd><p class="first last">Estimated numerical (sampling) error on <em>logz</em>.</p>
+</dd>
+<dt>h <em>(float)</em></dt>
+<dd><p class="first last">Information. This is a measure of the &#8220;peakiness&#8221; of the
+likelihood function. A constant likelihood has zero information.</p>
+</dd>
+<dt>samples <em>(ndarray)</em></dt>
+<dd><p class="first last">Parameter values of each sample. Shape is <em>(nsamples, ndim)</em>.</p>
+</dd>
+<dt>logvol <em>(ndarray)</em></dt>
+<dd><p class="first last">Natural log of prior volume of corresponding to each sample.
+Shape is <em>(nsamples,)</em>.</p>
+</dd>
+<dt>logl <em>(ndarray)</em></dt>
+<dd><p class="first last">Natural log of the likelihood for each sample, as returned by
+user-supplied <em>logl</em> function. Shape is <em>(nsamples,)</em>.</p>
+</dd>
+<dt>weights <em>(ndarray)</em></dt>
+<dd><p class="first last">Weight corresponding to each sample, normalized to unity.
+These are proportional to <code class="docutils literal"><span class="pre">exp(logvol</span> <span class="pre">+</span> <span class="pre">logl)</span></code>. Shape is
+<em>(nsamples,)</em>.</p>
+</dd>
+</dl>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name" colspan="2">Other Parameters:</th></tr>
+<tr class="field-odd field"><td>&nbsp;</td><td class="field-body"><p class="first"><strong>steps</strong> : int, optional</p>
+<blockquote>
+<div><p>For the &#8216;classic&#8217; method, the number of steps to take when selecting
+a new point. Default is 20.</p>
+</div></blockquote>
+<p><strong>enlarge</strong> : float, optional</p>
+<blockquote class="last">
+<div><p>For the &#8216;single&#8217; and &#8216;multi&#8217; methods, enlarge the ellipsoid(s) by
+this fraction in volume. Default is 1.2.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="nestle.print_progress">
+<code class="descclassname">nestle.</code><code class="descname">print_progress</code><span class="sig-paren">(</span><em>info</em><span class="sig-paren">)</span><a class="headerlink" href="#nestle.print_progress" title="Permalink to this definition">¶</a></dt>
+<dd><p>Callback function that prints a running total on a single line.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>info</strong> : dict</p>
+<blockquote class="last">
+<div><p>Dictionary containing keys <code class="docutils literal"><span class="pre">'it'</span></code> and <code class="docutils literal"><span class="pre">'logz'</span></code>.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="nestle.mean_and_cov">
+<code class="descclassname">nestle.</code><code class="descname">mean_and_cov</code><span class="sig-paren">(</span><em>x</em>, <em>weights</em><span class="sig-paren">)</span><a class="headerlink" href="#nestle.mean_and_cov" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute weighted sample mean and covariance.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>x</strong> : <a class="reference external" href="http://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.11)"><code class="xref py py-obj docutils literal"><span class="pre">ndarray</span></code></a></p>
+<blockquote>
+<div><p>2-D array containing data samples. Shape is (M, N) where N is the
+number of variables and M is the number of samples or observations.
+This is ordering is equivalent to using <code class="docutils literal"><span class="pre">rowvar=0</span></code> in numpy.cov.</p>
+</div></blockquote>
+<p><strong>weights</strong> : <a class="reference external" href="http://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.11)"><code class="xref py py-obj docutils literal"><span class="pre">ndarray</span></code></a></p>
+<blockquote>
+<div><p>1-D array of sample weights. Shape is (M,).</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>mean</strong> : <a class="reference external" href="http://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.11)"><code class="xref py py-obj docutils literal"><span class="pre">ndarray</span></code></a></p>
+<blockquote>
+<div><p>Weighted average of samples, with shape (N,).</p>
+</div></blockquote>
+<p><strong>cov</strong> : <a class="reference external" href="http://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.11)"><code class="xref py py-obj docutils literal"><span class="pre">ndarray</span></code></a></p>
+<blockquote class="last">
+<div><p>The covariance matrix of the variables with shape (N, N).</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>Implements formula described here:
+<a class="reference external" href="https://en.wikipedia.org/wiki/Sample_mean_and_sample_covariance">https://en.wikipedia.org/wiki/Sample_mean_and_sample_covariance</a>
+(see &#8220;weighted samples&#8221; section)</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="nestle.resample_equal">
+<code class="descclassname">nestle.</code><code class="descname">resample_equal</code><span class="sig-paren">(</span><em>samples</em>, <em>weights</em>, <em>rstate=None</em><span class="sig-paren">)</span><a class="headerlink" href="#nestle.resample_equal" title="Permalink to this definition">¶</a></dt>
+<dd><p>Resample the samples so that the final samples all have equal weight.</p>
+<p>Each input sample appears in the output array either
+<code class="xref py py-obj docutils literal"><span class="pre">floor(weights[i]</span> <span class="pre">*</span> <span class="pre">N)</span></code> or <code class="xref py py-obj docutils literal"><span class="pre">ceil(weights[i]</span> <span class="pre">*</span> <span class="pre">N)</span></code> times, with
+<code class="xref py py-obj docutils literal"><span class="pre">floor</span></code> or <code class="xref py py-obj docutils literal"><span class="pre">ceil</span></code> randomly selected (weighted by proximity).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>samples</strong> : <a class="reference external" href="http://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.11)"><code class="xref py py-obj docutils literal"><span class="pre">ndarray</span></code></a></p>
+<blockquote>
+<div><p>Unequally weight samples returned by the nested sampling algorithm.
+Shape is (N, ...), with N the number of samples.</p>
+</div></blockquote>
+<p><strong>weights</strong> : <a class="reference external" href="http://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.11)"><code class="xref py py-obj docutils literal"><span class="pre">ndarray</span></code></a></p>
+<blockquote>
+<div><p>Weight of each sample. Shape is (N,).</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>equal_weight_samples</strong> : <a class="reference external" href="http://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.11)"><code class="xref py py-obj docutils literal"><span class="pre">ndarray</span></code></a></p>
+<blockquote class="last">
+<div><p>Samples with equal weights, same shape as input samples.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>Implements the systematic resampling method described in
+<a class="reference external" href="http://people.isy.liu.se/rt/schon/Publications/HolSG2006.pdf">this PDF</a>.
+Another way to sample according to weights would be:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">N</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">weights</span><span class="p">)</span>
+<span class="n">new_samples</span> <span class="o">=</span> <span class="n">samples</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">N</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="n">weights</span><span class="p">)]</span>
+</pre></div>
+</div>
+<p>However, the method used in this function is less &#8220;noisy&#8221;.</p>
+<p class="rubric">Examples</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">1.</span><span class="p">,</span> <span class="mf">1.</span><span class="p">],</span> <span class="p">[</span><span class="mf">2.</span><span class="p">,</span> <span class="mf">2.</span><span class="p">],</span> <span class="p">[</span><span class="mf">3.</span><span class="p">,</span> <span class="mf">3.</span><span class="p">],</span> <span class="p">[</span><span class="mf">4.</span><span class="p">,</span> <span class="mf">4.</span><span class="p">]])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">w</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.6</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.15</span><span class="p">,</span> <span class="mf">0.05</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">nestle</span><span class="o">.</span><span class="n">resample_equal</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">w</span><span class="p">)</span>
+<span class="go">array([[ 1.,  1.],</span>
+<span class="go">       [ 1.,  1.],</span>
+<span class="go">       [ 1.,  1.],</span>
+<span class="go">       [ 3.,  3.]])</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="class">
+<dt id="nestle.Result">
+<em class="property">class </em><code class="descclassname">nestle.</code><code class="descname">Result</code><a class="headerlink" href="#nestle.Result" title="Permalink to this definition">¶</a></dt>
+<dd><p>Represents a sampling result.</p>
+<p>Since this class is essentially a subclass of dict with attribute
+accessors, one can see which attributes are available using the
+<code class="xref py py-obj docutils literal"><span class="pre">keys()</span></code> method.</p>
+<dl class="method">
+<dt id="nestle.Result.summary">
+<code class="descname">summary</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#nestle.Result.summary" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a nicely formatted string giving summary.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="devdocs.html" class="btn btn-neutral float-right" title="Developers’ Docs" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="stopping.html" class="btn btn-neutral" title="Stopping Criterion" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2014-2015, Kyle Barbary and contributors.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'0.2.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>
