@@ -6,10 +6,14 @@ from __future__ import print_function, division
 import sys
 import warnings
 import math
+import shelve
+import inspect
 
 import numpy as np
+
 try:
     from scipy.cluster.vq import kmeans2
+
     HAVE_KMEANS = True
 except ImportError:  # pragma: no cover
     HAVE_KMEANS = False
@@ -20,8 +24,10 @@ __version__ = "0.2.0"
 
 SQRTEPS = math.sqrt(float(np.finfo(np.float64).eps))
 
+
 # -----------------------------------------------------------------------------
 # Helpers
+
 
 def vol_prefactor(n):
     """Volume constant for an n-dimensional sphere:
@@ -49,7 +55,7 @@ def randsphere(n, rstate=np.random):
     """Draw a random point within an n-dimensional unit sphere"""
 
     z = rstate.randn(n)
-    return z * rstate.rand()**(1./n) / np.sqrt(np.sum(z**2))
+    return z * rstate.rand() ** (1. / n) / np.sqrt(np.sum(z ** 2))
 
 
 def random_choice(a, p, rstate=np.random):
@@ -82,6 +88,9 @@ def resample_equal(samples, weights, rstate=None):
 
     weights : `~numpy.ndarray`
         Weight of each sample. Shape is (N,).
+
+    rstate : `~numpy.random`
+        Random number generator instance.
     
     Returns
     -------
@@ -201,9 +210,9 @@ def mean_and_cov(x, weights):
     mean = np.average(x, weights=weights, axis=0)
     dx = x - mean
     wsum = np.sum(weights)
-    w2sum = np.sum(weights**2)
+    w2sum = np.sum(weights ** 2)
 
-    cov = wsum / (wsum**2 - w2sum) * np.einsum('i,ij,ik', weights, dx, dx)
+    cov = wsum / (wsum ** 2 - w2sum) * np.einsum('i,ij,ik', weights, dx, dx)
 
     return mean, cov
 
@@ -247,8 +256,8 @@ class Ellipsoid(object):
 
     def __init__(self, ctr, a):
         self.n = len(ctr)
-        self.ctr = ctr    # center coordinates
-        self.a = a        # ~ inverse of covariance of points contained
+        self.ctr = ctr  # center coordinates
+        self.a = a  # ~ inverse of covariance of points contained
         self.vol = vol_prefactor(self.n) / np.sqrt(np.linalg.det(a))
 
         # eigenvalues (l) are a^-2, b^-2, ... (lengths of principle axes)
@@ -264,7 +273,7 @@ class Ellipsoid(object):
     def scale_to_vol(self, vol):
         """Scale ellipoid to satisfy a target volume."""
         f = (vol / self.vol) ** (1.0 / self.n)  # linear factor
-        self.a *= f**-2
+        self.a *= f ** -2
         self.axlens *= f
         self.axes *= f
         self.vol = vol
@@ -328,7 +337,7 @@ def make_eigvals_positive(a, targetprod):
     if np.any(mask):
         nzprod = np.product(w[~mask])  # product of nonzero eigenvalues
         nzeros = mask.sum()  # number of zero eigenvalues
-        w[mask] = (targetprod / nzprod) ** (1./nzeros)  # adjust zero eigvals
+        w[mask] = (targetprod / nzprod) ** (1. / nzeros)  # adjust zero eigvals
         a = np.dot(np.dot(v, np.diag(w)), np.linalg.inv(v))  # re-form cov
 
     return a
@@ -356,14 +365,14 @@ def bounding_ellipsoid(x, pointvol=0., minvol=False):
     # If there is only a single point, return an N-sphere with volume `pointvol`
     # centered at the point.
     if npoints == 1:
-        r = (pointvol / vol_prefactor(ndim))**(1./ndim)
-        return Ellipsoid(x[0], (1. / r**2) * np.identity(ndim))
+        r = (pointvol / vol_prefactor(ndim)) ** (1. / ndim)
+        return Ellipsoid(x[0], (1. / r ** 2) * np.identity(ndim))
 
     # Calculate covariance of points
     ctr = np.mean(x, axis=0)
     delta = x - ctr
     cov = np.cov(delta, rowvar=0)
-    
+
     # when ndim = 1, np.cov returns a 0-d array. Make it a 1x1 2-d array.
     if ndim == 1:
         cov = np.atleast_2d(cov)
@@ -384,7 +393,7 @@ def bounding_ellipsoid(x, pointvol=0., minvol=False):
     # combination of others). When this happens, we expand the ellipse
     # in the zero dimensions to fulfill the volume expected from
     # ``pointvol``.
-    targetprod = (npoints * pointvol / vol_prefactor(ndim))**2
+    targetprod = (npoints * pointvol / vol_prefactor(ndim)) ** 2
     cov = make_eigvals_positive(cov, targetprod)
 
     # The matrix defining the ellipsoid.
@@ -444,7 +453,7 @@ def _bounding_ellipsoids(x, ell, pointvol=0.):
 
     # starting cluster centers for kmeans (k=2)
     p1, p2 = ell.major_axis_endpoints()  # returns two 1-d arrays
-    start_ctrs = np.vstack((p1, p2)) # shape is (k, N) = (2, N)
+    start_ctrs = np.vstack((p1, p2))  # shape is (k, N) = (2, N)
 
     # Split points into two clusters using k-means clustering with k=2
     # centroid = (2, ndim) ; label = (npoints,)
@@ -533,7 +542,7 @@ def sample_ellipsoids(ells, rstate=np.random):
     # Select an ellipsoid at random, according to volumes
     vols = np.array([ell.vol for ell in ells])
     i = random_choice(nells, vols / vols.sum(), rstate=rstate)
-    
+
     # Select a point from the ellipsoid
     x = ells[i].sample(rstate=rstate)
 
@@ -550,6 +559,7 @@ def sample_ellipsoids(ells, rstate=np.random):
         return x
     else:
         return sample_ellipsoids(ells, rstate=rstate)
+
 
 # -----------------------------------------------------------------------------
 # Classes for dealing with non-parallel calls
@@ -568,7 +578,8 @@ class FakePool(object):
 
     def shutdown(self):
         pass
-    
+
+
 class FakeFuture(object):
     """A fake Future to mimic function calls."""
 
@@ -582,6 +593,7 @@ class FakeFuture(object):
 
     def cancel(self):
         return True
+
 
 # -----------------------------------------------------------------------------
 # Sampler classes
@@ -618,7 +630,7 @@ class Sampler:
     def fill_queue(self):
         """Fill up the queue with operations."""
 
-        while len(self.queue)<self.queue_size:
+        while len(self.queue) < self.queue_size:
             x = self.propose_point()
             v = self.prior_transform(x)
             self.queue.append((x, v, self.pool.submit(self.loglikelihood, v)))
@@ -635,6 +647,7 @@ class Sampler:
         self.fill_queue()
         self.used += 1
         return x, v, r
+
 
 class ClassicSampler(Sampler):
     """Picks an active point at random and evolves it with a
@@ -740,7 +753,7 @@ class MultiEllipsoidSampler(Sampler):
     def propose_point(self):
         while True:
             u = sample_ellipsoids(self.ells, rstate=self.rstate)
-            if np.all(u > 0.) and np.all (u < 1.):
+            if np.all(u > 0.) and np.all(u < 1.):
                 break
         return u
 
@@ -762,12 +775,13 @@ _SAMPLERS = {'classic': ClassicSampler,
              'single': SingleEllipsoidSampler,
              'multi': MultiEllipsoidSampler}
 
+
 def sample(loglikelihood, prior_transform, ndim, npoints=100,
            method='single', update_interval=None, npdim=None,
            maxiter=None, maxcall=None, dlogz=None, decline_factor=None,
            rstate=None, callback=None, queue_size=None, pool=None,
            logl_args=None, logl_kwargs=None, prior_args=None,
-           prior_kwargs=None, **options):
+           prior_kwargs=None, checkpoint=None, restart=None, **options):
     """Perform nested sampling to evaluate Bayesian evidence.
 
     Parameters
@@ -865,6 +879,13 @@ def sample(loglikelihood, prior_transform, ndim, npoints=100,
 
     logl_kwargs, prior_kwargs: dict
         Kwargs passed to the loglikelihood and prior transform
+
+    checkpoint: str, optional
+        Maintain a checkpoint file at the given path.  This file is updated at the end of each
+        iteration and can be used to restart the sampler.
+
+    restart: str, optional
+        Checkpoint file to restart from.
 
 
     Other Parameters
@@ -980,40 +1001,63 @@ def sample(loglikelihood, prior_transform, ndim, npoints=100,
     prior_transform = _FunctionWrapper(
         prior_transform, prior_args, prior_kwargs, name='prior_transform')
 
-    # Initialize active points and calculate likelihoods
-    active_u = rstate.rand(npoints, npdim)  # position in unit cube
-    active_v = np.empty((npoints, ndim), dtype=np.float64)  # real params
-    for i in range(npoints):
-        active_v[i, :] = prior_transform(active_u[i, :])
-    active_logl = np.fromiter(pool.map(loglikelihood, active_v), 
-                              dtype=np.float64) # log likelihood
+    restart = True
+
+    if restart is not None:
+        # Reload a dump
+        with shelve.open(restart) as shelf:
+            active_u = shelf['active_u']
+            active_v = shelf['active_v']
+            active_logl = shelf['active_logl']
+            saved_v = shelf['saved_v']
+            saved_logl = shelf['saved_logl']
+            saved_logvol = shelf['saved_logvol']
+            saved_logwt = shelf['saved_logwt']
+            h = shelf['h']
+            logz = shelf['logz']
+            logvol = shelf['logvol']
+            ncall = shelf['ncall']
+            it = shelf['it']
+            ndecl = shelf['ndecl']
+            logwt_old = shelf['logwt_old']
+            since_update = shelf['since_update']
+        print(f"reread dump :: it = {it}")
+    else:
+        # Initialize active points and calculate likelihoods
+        active_u = rstate.rand(npoints, npdim)  # position in unit cube
+        active_v = np.empty((npoints, ndim), dtype=np.float64)  # real params
+        for i in range(npoints):
+            active_v[i, :] = prior_transform(active_u[i, :])
+        active_logl = np.fromiter(pool.map(loglikelihood, active_v),
+                                  dtype=np.float64)  # log likelihood
+
+        # Initialize values for nested sampling loop.
+        saved_v = []  # stored points for posterior results
+        saved_logl = []
+        saved_logvol = []
+        saved_logwt = []
+        h = 0.0  # Information, initially 0.
+        logz = -1e300  # ln(Evidence Z), initially Z=0.
+        logvol = math.log(1.0 - math.exp(-1.0 / npoints))  # first point removed will
+        # have volume 1-e^(1/n)
+        ncall = npoints  # number of calls we already made
+
+        # Nested sampling loop.
+        ndecl = 0
+        logwt_old = -np.inf
+        it = 0
+        since_update = 0
+
     sampler = _SAMPLERS[method](loglikelihood, prior_transform, active_u,
                                 rstate, options, queue_size, pool)
-
-    # Initialize values for nested sampling loop.
-    saved_v = []  # stored points for posterior results
-    saved_logl = []
-    saved_logvol = []
-    saved_logwt = []
-    h = 0.0  # Information, initially 0.
-    logz = -1e300  # ln(Evidence Z), initially Z=0.
-    logvol = math.log(1.0 - math.exp(-1.0/npoints))  # first point removed will
-                                                     # have volume 1-e^(1/n)
-    ncall = npoints  # number of calls we already made
-
     # Initialize sampler
-    sampler.update(1./npoints)
+    sampler.update(1. / npoints)
 
     callback_info = {'it': 0,
                      'logz': logz,
                      'active_u': active_u,
                      'sampler': sampler}
 
-    # Nested sampling loop.
-    ndecl = 0
-    logwt_old = -np.inf
-    it = 0
-    since_update = 0
     while it < maxiter:
         if (callback is not None) and (it > 0):
             callback_info.update(it=it, logz=logz)
@@ -1080,6 +1124,13 @@ def sample(loglikelihood, prior_transform, ndim, npoints=100,
 
         it += 1
 
+        if checkpoint is not None:
+            keys = 'active_u active_v active_logl saved_v saved_logl saved_logvol saved_logwt h logz logvol ncall it ' \
+                   'ndecl logwt_old since_update'.split()
+            with shelve.open(checkpoint) as shelf:
+                for key in keys:
+                    shelf[key] = locals()[key]
+
     # Add remaining active points.
     # After N samples have been taken out, the remaining volume is
     # e^(-N/npoints). Thus, the remaining volume for each active point
@@ -1118,7 +1169,7 @@ def sample(loglikelihood, prior_transform, ndim, npoints=100,
         ('weights', np.exp(np.array(saved_logwt) - logz)),
         ('logvol', np.array(saved_logvol)),
         ('logl', np.array(saved_logl))
-        ])
+    ])
 
 
 class _FunctionWrapper(object):
