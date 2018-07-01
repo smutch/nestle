@@ -7,7 +7,6 @@ import sys
 import warnings
 import math
 import shelve
-from copy import copy
 
 import numpy as np
 
