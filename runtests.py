@@ -436,3 +436,44 @@ def test_result():
 def test_print_progress():
     """Check that print_progress don't error."""
     nestle.print_progress({'it': 0, 'logz': 1.})
+
+# ----------------------------------------------------------------------------
+# test checkpoint and restart
+
+
+class FailTrigger(Exception):
+    pass
+
+
+def early_termination_callback(cbinfo):
+    if cbinfo['it'] == 2:
+        raise FailTrigger
+
+
+def test_restart(tmpdir):
+    checkpoint_file = str(tmpdir.join("checkpoint.pkl"))
+
+    logl = lambda x: 0.0
+    prior = lambda x: x
+
+    sample_args = (logl, prior, 2)
+    sample_kwargs = dict(method="single", npoints=4)
+
+    single_res = nestle.sample(*sample_args, **sample_kwargs,
+                               rstate=RandomState(0))
+
+    try:
+        res = nestle.sample(*sample_args, **sample_kwargs,
+                            checkpoint=checkpoint_file,
+                            callback=early_termination_callback,
+                            rstate=RandomState(0))
+    except FailTrigger:
+        res = nestle.sample(*sample_args, **sample_kwargs,
+                            restart=checkpoint_file,
+                            rstate=RandomState(0))
+
+    for k, v in res.items():
+        if isinstance(v, np.ndarray):
+            assert(np.all(np.isclose(v, single_res[k])))
+        else:
+            assert(v == single_res[k])
