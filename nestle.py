@@ -7,7 +7,7 @@ import sys
 import warnings
 import math
 import shelve
-import inspect
+from copy import copy
 
 import numpy as np
 
@@ -1001,11 +1001,10 @@ def sample(loglikelihood, prior_transform, ndim, npoints=100,
     prior_transform = _FunctionWrapper(
         prior_transform, prior_args, prior_kwargs, name='prior_transform')
 
-    restart = True
-
     if restart is not None:
         # Reload a dump
         with shelve.open(restart) as shelf:
+            rstate = shelf['rstate']
             active_u = shelf['active_u']
             active_v = shelf['active_v']
             active_logl = shelf['active_logl']
@@ -1021,7 +1020,19 @@ def sample(loglikelihood, prior_transform, ndim, npoints=100,
             ndecl = shelf['ndecl']
             logwt_old = shelf['logwt_old']
             since_update = shelf['since_update']
-        print(f"reread dump :: it = {it}")
+
+            try:
+                _ell = shelf['ell']
+            except KeyError:
+                pass
+
+            try:
+                _ells = shelf['ells']
+            except KeyError:
+                pass
+
+        print("Read checkpoint file %s." % restart)
+        print("Restarting from it = %d." % it)
     else:
         # Initialize active points and calculate likelihoods
         active_u = rstate.rand(npoints, npdim)  # position in unit cube
@@ -1050,10 +1061,22 @@ def sample(loglikelihood, prior_transform, ndim, npoints=100,
 
     sampler = _SAMPLERS[method](loglikelihood, prior_transform, active_u,
                                 rstate, options, queue_size, pool)
-    # Initialize sampler
-    sampler.update(1. / npoints)
 
-    callback_info = {'it': 0,
+    if restart is None:
+        # Initialize sampler
+        sampler.update(1. / npoints)
+    else:
+        try:
+            sampler.ell = _ell
+        except (AttributeError, UnboundLocalError):
+            pass
+
+        try:
+            sampler.ells = _ells
+        except (AttributeError, UnboundLocalError):
+            pass
+
+    callback_info = {'it': it,
                      'logz': logz,
                      'active_u': active_u,
                      'sampler': sampler}
@@ -1125,11 +1148,21 @@ def sample(loglikelihood, prior_transform, ndim, npoints=100,
         it += 1
 
         if checkpoint is not None:
-            keys = 'active_u active_v active_logl saved_v saved_logl saved_logvol saved_logwt h logz logvol ncall it ' \
-                   'ndecl logwt_old since_update'.split()
+            keys = 'rstate active_u active_v active_logl saved_v saved_logl saved_logvol saved_logwt h logz logvol ' \
+                   'ncall it ndecl logwt_old since_update'.split()
             with shelve.open(checkpoint) as shelf:
                 for key in keys:
                     shelf[key] = locals()[key]
+
+                try:
+                    shelf['ell'] = sampler.ell
+                except AttributeError:
+                    pass
+
+                try:
+                    shelf['ells'] = sampler.ells
+                except AttributeError:
+                    pass
 
     # Add remaining active points.
     # After N samples have been taken out, the remaining volume is
