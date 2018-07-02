@@ -852,8 +852,8 @@ def sample(loglikelihood, prior_transform, ndim, npoints=100,
         are mutually exclusive.
 
     rstate : `~numpy.random.RandomState`, optional
-        RandomState instance. If not given, the global random state of the
-        ``numpy.random`` module will be used.
+        RandomState instance. If not given, a
+        ``numpy.random.RandomState(None)`` instance will be used.
 
     callback : function, optional
         Callback function to be called at each iteration. A single argument,
@@ -958,7 +958,7 @@ def sample(loglikelihood, prior_transform, ndim, npoints=100,
         warnings.warn("You really want to make npoints >= 2 * ndim!")
 
     if rstate is None:
-        rstate = np.random
+        rstate = np.random.RandomState()
 
     # Stopping criterion.
     if dlogz is not None and decline_factor is not None:
