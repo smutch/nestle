@@ -631,10 +631,16 @@ class Sampler:
         if not self.queue:
             self.fill_queue()
         x, v, f = self.queue.pop(0)
-        r = f.result()
+        ret = f.result()
+        try:
+            new_logl = float(ret[0])
+            blob = ret[1]
+        except (IndexError, TypeError):
+            new_logl = ret
+            blob = None
         self.fill_queue()
         self.used += 1
-        return x, v, r
+        return x, v, new_logl, blob
 
 class ClassicSampler(Sampler):
     """Picks an active point at random and evolves it with a
@@ -671,7 +677,15 @@ class ClassicSampler(Sampler):
         while ncall < self.steps or accept == 0:
             new_u = self.propose_point(u, scale)
             new_v = self.prior_transform(new_u)
-            new_logl = self.loglikelihood(new_v)
+
+            ret = self.loglikelihood(new_v)
+            try:
+                new_logl = float(ret[0])
+                blob = ret[1]
+            except (IndexError, TypeError):
+                new_logl = ret
+                blob = None
+
             if new_logl >= loglstar:
                 u = new_u
                 v = new_v
@@ -688,7 +702,7 @@ class ClassicSampler(Sampler):
 
             ncall += 1
 
-        return u, v, logl, ncall
+        return u, v, logl, ncall, blob
 
 
 class SingleEllipsoidSampler(Sampler):
@@ -715,12 +729,12 @@ class SingleEllipsoidSampler(Sampler):
     def new_point(self, loglstar):
         ncall = 0
         while True:
-            u, v, logl = self.get_point_value()
+            u, v, logl, blob = self.get_point_value()
             ncall += 1
             if logl >= loglstar:
                 break
 
-        return u, v, logl, ncall
+        return u, v, logl, ncall, blob
 
 
 class MultiEllipsoidSampler(Sampler):
@@ -747,12 +761,12 @@ class MultiEllipsoidSampler(Sampler):
     def new_point(self, loglstar):
         ncall = 0
         while True:
-            u, v, logl = self.get_point_value()
+            u, v, logl, blob = self.get_point_value()
             ncall += 1
             if logl >= loglstar:
                 break
 
-        return u, v, logl, ncall
+        return u, v, logl, ncall, blob
 
 
 # -----------------------------------------------------------------------------
@@ -985,8 +999,14 @@ def sample(loglikelihood, prior_transform, ndim, npoints=100,
     active_v = np.empty((npoints, ndim), dtype=np.float64)  # real params
     for i in range(npoints):
         active_v[i, :] = prior_transform(active_u[i, :])
-    active_logl = np.fromiter(pool.map(loglikelihood, active_v), 
-                              dtype=np.float64) # log likelihood
+    res = list(_ for _ in pool.map(loglikelihood, active_v))  # log likelihood and possibly blobs
+    try:
+        active_logl, active_blobs = list(zip(*res))
+        active_logl = np.array(active_logl, dtype=np.float64)
+    except TypeError:
+        active_logl = np.array(res, dtype=np.float64)
+        active_blobs = None
+
     sampler = _SAMPLERS[method](loglikelihood, prior_transform, active_u,
                                 rstate, options, queue_size, pool)
 
@@ -995,6 +1015,12 @@ def sample(loglikelihood, prior_transform, ndim, npoints=100,
     saved_logl = []
     saved_logvol = []
     saved_logwt = []
+
+    # Use the initialization step to decide if we have an loglikelihood which
+    # is returning a blob.  If not, then there is no reason to store a big list
+    # of None values.
+    saved_blobs = [] if active_blobs is not None else None
+
     h = 0.0  # Information, initially 0.
     logz = -1e300  # ln(Evidence Z), initially Z=0.
     logvol = math.log(1.0 - math.exp(-1.0/npoints))  # first point removed will
@@ -1035,6 +1061,8 @@ def sample(loglikelihood, prior_transform, ndim, npoints=100,
         saved_logwt.append(logwt)
         saved_logvol.append(logvol)
         saved_logl.append(active_logl[worst])
+        if saved_blobs is not None:
+            saved_blobs.append(active_blobs[worst])
 
         # The new likelihood constraint is that of the worst object.
         loglstar = active_logl[worst]
@@ -1049,12 +1077,14 @@ def sample(loglikelihood, prior_transform, ndim, npoints=100,
 
         # Choose a new point from within the likelihood constraint
         # (having logl > loglstar).
-        u, v, logl, nc = sampler.new_point(loglstar)
+        u, v, logl, nc, blob = sampler.new_point(loglstar)
 
         # replace worst point with new point
         active_u[worst] = u
         active_v[worst] = v
         active_logl[worst] = logl
+        if active_blobs is not None:
+            active_blobs[worst] = blob
         ncall += nc
         since_update += nc
 
@@ -1098,6 +1128,9 @@ def sample(loglikelihood, prior_transform, ndim, npoints=100,
         saved_logl.append(active_logl[i])
         saved_logvol.append(logvol)
 
+    if saved_blobs is not None and active_blobs is not None:
+        saved_blobs.extend(active_blobs[:npoints])
+
     # h should always be nonnegative (we take the sqrt below).
     # Numerical error makes it negative in pathological corner cases
     # such as flat likelihoods. Here we correct those cases to zero.
@@ -1115,10 +1148,11 @@ def sample(loglikelihood, prior_transform, ndim, npoints=100,
         ('logzerr', math.sqrt(h / npoints)),
         ('h', h),
         ('samples', np.array(saved_v)),
+        ('blobs', saved_blobs),
         ('weights', np.exp(np.array(saved_logwt) - logz)),
         ('logvol', np.array(saved_logvol)),
         ('logl', np.array(saved_logl))
-        ])
+    ])
 
 
 class _FunctionWrapper(object):
