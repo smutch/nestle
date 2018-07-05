@@ -1001,7 +1001,7 @@ def sample(loglikelihood, prior_transform, ndim, npoints=100,
         active_v[i, :] = prior_transform(active_u[i, :])
     res = list(_ for _ in pool.map(loglikelihood, active_v))  # log likelihood and possibly blobs
     try:
-        active_logl, active_blobs = list(zip(*res))
+        active_logl, active_blobs = map(list, zip(*res))
         active_logl = np.array(active_logl, dtype=np.float64)
     except TypeError:
         active_logl = np.array(res, dtype=np.float64)
