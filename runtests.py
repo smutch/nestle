@@ -238,6 +238,20 @@ def test_bounding_ellipsoid_robust():
             for xi in x:
                 assert ell.contains(xi)
 
+
+def test_blobs():
+    """Test that blobs are being correctly recorded."""
+
+    logl = lambda x: (0.0, x*10)
+    prior = lambda x: x
+    res = nestle.sample(logl, prior, 2, method="single",
+                        npoints=4, rstate=RandomState(0))
+
+    assert_allclose(res.blobs, res.samples*10, atol=1.0e-10)
+    assert_allclose(res.logz, 0.0, atol=1.e-10)
+    assert_allclose(res.h, 0.0, atol=1.e-10)
+
+
 # -----------------------------------------------------------------------------
 # Case test helpers
 
