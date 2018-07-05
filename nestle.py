@@ -1054,13 +1054,14 @@ def sample(loglikelihood, prior_transform, ndim, npoints=100,
         active_v = np.empty((npoints, ndim), dtype=np.float64)  # real params
         for i in range(npoints):
             active_v[i, :] = prior_transform(active_u[i, :])
-            res = list(_ for _ in pool.map(loglikelihood, active_v))  # log likelihood and possibly blobs
-            try:
-                active_logl, active_blobs = map(list, zip(*res))
-                active_logl = np.array(active_logl, dtype=np.float64)
-            except TypeError:
-                active_logl = np.array(res, dtype=np.float64)
-                active_blobs = None
+
+        res = list(_ for _ in pool.map(loglikelihood, active_v))  # log likelihood and possibly blobs
+        try:
+            active_logl, active_blobs = map(list, zip(*res))
+            active_logl = np.array(active_logl, dtype=np.float64)
+        except TypeError:
+            active_logl = np.array(res, dtype=np.float64)
+            active_blobs = None
 
         # Initialize values for nested sampling loop.
         saved_v = []  # stored points for posterior results
