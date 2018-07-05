@@ -1021,10 +1021,12 @@ def sample(loglikelihood, prior_transform, ndim, npoints=100,
             active_u = shelf['active_u']
             active_v = shelf['active_v']
             active_logl = shelf['active_logl']
+            active_blobs = shelf['active_blobs']
             saved_v = shelf['saved_v']
             saved_logl = shelf['saved_logl']
             saved_logvol = shelf['saved_logvol']
             saved_logwt = shelf['saved_logwt']
+            saved_blobs = shelf['saved_blobs']
             h = shelf['h']
             logz = shelf['logz']
             logvol = shelf['logvol']
@@ -1176,8 +1178,10 @@ def sample(loglikelihood, prior_transform, ndim, npoints=100,
         it += 1
 
         if checkpoint is not None:
-            keys = 'rstate active_u active_v active_logl saved_v saved_logl saved_logvol saved_logwt h logz logvol ' \
-                   'ncall it ndecl logwt_old since_update'.split()
+            keys = 'rstate active_u active_v active_logl active_blobs ' \
+                'saved_v saved_logl saved_logvol saved_logwt ' \
+                'saved_blobs h logz logvol ncall it ndecl logwt_old ' \
+                'since_update'.split()
             with shelve.open(checkpoint) as shelf:
                 for key in keys:
                     shelf[key] = locals()[key]
