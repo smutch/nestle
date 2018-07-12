@@ -1106,11 +1106,14 @@ def sample(loglikelihood, prior_transform, ndim, npoints=100,
     callback_info = {'it': it,
                      'logz': logz,
                      'active_u': active_u,
-                     'sampler': sampler}
+                     'active_logl': active_logl,
+                     'npoints': npoints,
+                     'sampler': sampler,
+                     'ncall': ncall}
 
     while it < maxiter:
         if (callback is not None) and (it > 0):
-            callback_info.update(it=it, logz=logz)
+            callback_info.update(it=it, logz=logz, ncall=ncall)
             callback(callback_info)
 
         # worst object in collection and its weight (= volume * likelihood)
